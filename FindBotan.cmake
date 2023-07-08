@@ -22,25 +22,43 @@ include(FetchContent)
 FetchContent_Declare(
     botan
     URL ${DOWNLOAD_URL}
-    DOWNLOAD_DIR ${CMAKE_CURRENT_BINARY_DIR}/download
-    SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/source
-    BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/build
-    CONFIGURE_COMMAND "${Python_EXECUTABLE} ./configure.py"
-    BUILD_COMMAND ""
-    INSTALL_COMMAND ""
 )
 
-# Build it as a static library
+set(BOTAN_COMFIG_ARGS "--without-documentation")
+
 FetchContent_GetProperties(botan)
 if(NOT botan_POPULATED)
     FetchContent_Populate(botan)
-    add_subdirectory(${botan_SOURCE_DIR} ${botan_BINARY_DIR})
 endif()
 
-# Create a target for Botan
-add_library(botan INTERFACE)
-target_include_directories(botan INTERFACE ${botan_SOURCE_DIR}/include)
-target_link_libraries(botan INTERFACE ${botan_BINARY_DIR}/libbotan-${Botan_VERSION_STRING}.a)
+set(CONFIGURE_COMMAND ${Python3_EXECUTABLE} configure.py ${BOTAN_COMFIG_ARGS})
+message(STATUS "Botan configure command: ${CONFIGURE_COMMAND}")
+execute_process(
+    COMMAND ${CONFIGURE_COMMAND}
+    WORKING_DIRECTORY ${botan_SOURCE_DIR}
+)
 
-# Create a target for Botan::botan
-add_library(Botan::botan ALIAS botan)
+# Build Botan, only Makefile toolchain to build Botan
+set(BOTAN_BUILD_COMMAND ${CMAKE_MAKE_PROGRAM})
+# Enable parallel build and color output
+if(NOT DEFINED PROCESSOR_COUNT)
+    include(ProcessorCount)
+    ProcessorCount(PROCESSOR_COUNT)
+    if(NOT PROCESSOR_COUNT EQUAL 0)
+        set(PROCESSOR_COUNT 4)
+    endif()
+endif()
+
+set(BOTAN_BUILD_COMMAND ${BOTAN_BUILD_COMMAND} -j ${PROCESSOR_COUNT})
+execute_process(
+   COMMAND ${BOTAN_BUILD_COMMAND}
+   WORKING_DIRECTORY ${botan_SOURCE_DIR}
+)
+
+# Set Botan_INCLUDE_DIRS to the include directory
+set(Botan_INCLUDE_DIRS ${botan_BINARY_DIR}/include PARENT_SCOPE)
+# Set Botan_LIBRARIES to the library directory
+set(Botan_LIBRARIES ${botan_BINARY_DIR}/lib PARENT_SCOPE)
+
+# Set Botan_FOUND to true
+set(Botan_FOUND TRUE PARENT_SCOPE)
