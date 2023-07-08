@@ -29,6 +29,22 @@ if(NOT botan_POPULATED)
     FetchContent_Populate(botan)
 endif()
 
+# Because this configure.py could not identify the "/usr/bin/c++" referenced with
+# the CMAKE_CXX_COMPILER variable, we need to resolve the CMAKE_CXX_COMPILER variable
+# following by the soft link of "/usr/bin/c++" to the real compiler path.
+# We use execute_process to execute the command "readlink -f /usr/bin/c++" to get the 
+# real compiler path.
+
+# We only need to do this when the CMAKE_CXX_COMPILER variable is "/usr/bin/c++"
+# Check if the CMAKE_CXX_COMPILER variable is "/usr/bin/c++"
+if (CMAKE_CXX_COMPILER STREQUAL "/usr/bin/c++")
+    execute_process(
+        COMMAND readlink -f /usr/bin/c++
+        OUTPUT_VARIABLE CMAKE_CXX_COMPILER
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+endif()
+
 set(BOTAN_COMFIG_ARGS "--without-documentation")
 set(CONFIGURE_COMMAND ${Python3_EXECUTABLE} configure.py ${BOTAN_COMFIG_ARGS})
 message(STATUS "Botan configure command: ${CONFIGURE_COMMAND}")
