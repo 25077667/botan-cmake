@@ -24,13 +24,12 @@ FetchContent_Declare(
     URL ${DOWNLOAD_URL}
 )
 
-set(BOTAN_COMFIG_ARGS "--without-documentation")
-
 FetchContent_GetProperties(botan)
 if(NOT botan_POPULATED)
     FetchContent_Populate(botan)
 endif()
 
+set(BOTAN_COMFIG_ARGS "--without-documentation")
 set(CONFIGURE_COMMAND ${Python3_EXECUTABLE} configure.py ${BOTAN_COMFIG_ARGS})
 message(STATUS "Botan configure command: ${CONFIGURE_COMMAND}")
 execute_process(
@@ -39,7 +38,7 @@ execute_process(
 )
 
 # Build Botan, only Makefile toolchain to build Botan
-set(BOTAN_BUILD_COMMAND ${CMAKE_MAKE_PROGRAM})
+set(BOTAN_BUILD_COMMAND make)
 # Enable parallel build and color output
 if(NOT DEFINED PROCESSOR_COUNT)
     include(ProcessorCount)
