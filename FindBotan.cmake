@@ -45,13 +45,16 @@ if (CMAKE_CXX_COMPILER STREQUAL "/usr/bin/c++")
     )
 endif()
 
-set(BOTAN_COMFIG_ARGS "--without-documentation")
-set(CONFIGURE_COMMAND ${Python3_EXECUTABLE} configure.py ${BOTAN_COMFIG_ARGS})
-message(STATUS "Botan configure command: ${CONFIGURE_COMMAND}")
-execute_process(
-    COMMAND ${CONFIGURE_COMMAND}
-    WORKING_DIRECTORY ${botan_SOURCE_DIR}
-)
+# Cache the configure.py command
+if (NOT EXISTS ${botan_BINARY_DIR}/Makefile)
+    set(BOTAN_COMFIG_ARGS "--without-documentation")
+    set(CONFIGURE_COMMAND ${Python3_EXECUTABLE} configure.py ${BOTAN_COMFIG_ARGS})
+    message(STATUS "Botan configure command: ${CONFIGURE_COMMAND}")
+    execute_process(
+        COMMAND ${CONFIGURE_COMMAND}
+        WORKING_DIRECTORY ${botan_SOURCE_DIR}
+    )
+endif()
 
 # Build Botan, only Makefile toolchain to build Botan
 set(BOTAN_BUILD_COMMAND make)
