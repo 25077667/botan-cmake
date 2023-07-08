@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-
 project(botan)
 
 # Set botan variables: version, download url
@@ -14,66 +13,123 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
     cmake_policy(SET CMP0135 NEW)
 endif()
 
-# Because Botan needs python interpreter dependencies, we need to find package Python3
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
+# Function to find Python3 interpreter
+function(find_python3)
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
-# FetchContent the tarball
-include(FetchContent)
-FetchContent_Declare(
-    botan
-    URL ${DOWNLOAD_URL}
-)
+    # Expose the Python3_EXECUTABLE to the parent scope
+    set(Python3_EXECUTABLE ${Python3_EXECUTABLE} PARENT_SCOPE)
+endfunction()
 
-FetchContent_GetProperties(botan)
-if(NOT botan_POPULATED)
-    FetchContent_Populate(botan)
-endif()
+# Function to fetch the tarball
+function(fetch_tarball)
+    include(FetchContent)
+    FetchContent_Declare(botan URL ${DOWNLOAD_URL})
+    FetchContent_GetProperties(botan)
+    if(NOT botan_POPULATED)
+        FetchContent_Populate(botan)
+    endif()
+endfunction()
 
-# Because this configure.py could not identify the "/usr/bin/c++"
-# We need to set the CXX compiler to the configure.py by the platform
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(BOTAN_CXX_COMPILER "gcc")
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(BOTAN_CXX_COMPILER "clang")
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")  
-    set(BOTAN_CXX_COMPILER "msvc")
-endif()
+# Function to set the CXX compiler for configure.py
+function(set_cxx_compiler)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        set(BOTAN_CXX_COMPILER "gcc")
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        set(BOTAN_CXX_COMPILER "clang")
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")  
+        set(BOTAN_CXX_COMPILER "msvc")
+    endif()
 
-# Cache the configure.py command
-if (NOT EXISTS ${botan_SOURCE_DIR}/Makefile)
-    set(BOTAN_COMFIG_ARGS 
+    # Expose the CXX compiler to configure.py
+    set(BOTAN_CXX_COMPILER ${BOTAN_CXX_COMPILER} PARENT_SCOPE)
+endfunction()
+
+# Function to rename Makefile if it exists
+function(rename_makefile_if_exists source_dir)
+    if (EXISTS ${source_dir}/Makefile)
+        file(RENAME ${source_dir}/Makefile ${source_dir}/Makefile.old)
+    endif()
+endfunction()
+
+# Function to generate Makefile using configure.py
+function(generate_makefile source_dir)
+    set(BOTAN_CONFIG_ARGS 
         --cc=${BOTAN_CXX_COMPILER}
         --without-documentation
     )
-    set(CONFIGURE_COMMAND ${Python3_EXECUTABLE} configure.py ${BOTAN_COMFIG_ARGS})
+    set(CONFIGURE_COMMAND ${Python3_EXECUTABLE} configure.py ${BOTAN_CONFIG_ARGS})
     message(STATUS "Botan configure command: ${CONFIGURE_COMMAND}")
     execute_process(
         COMMAND ${CONFIGURE_COMMAND}
-        WORKING_DIRECTORY ${botan_SOURCE_DIR}
+        WORKING_DIRECTORY ${source_dir}
     )
-endif()
+endfunction()
 
-# Build Botan, only Makefile toolchain to build Botan
-set(BOTAN_BUILD_COMMAND make)
-# Enable parallel build and color output
-if(NOT DEFINED PROCESSOR_COUNT)
-    include(ProcessorCount)
-    ProcessorCount(PROCESSOR_COUNT)
-    if(NOT PROCESSOR_COUNT EQUAL 0)
-        set(PROCESSOR_COUNT 4)
+# Function to check if Makefile needs to be rebuilt
+function(check_makefile_rebuild source_dir)
+    if (EXISTS ${source_dir}/Makefile.old)
+        # If it is Windows, we use cmd.exe to fc Makefile and Makefile.old
+        # because diff command is not available in Windows
+        if (WIN32)
+            set(DIFF_COMMAND cmd.exe /c "fc ${source_dir}/Makefile ${source_dir}/Makefile.old")
+        else()
+            set(DIFF_COMMAND diff ${source_dir}/Makefile ${source_dir}/Makefile.old)
+        endif()
+
+        execute_process(
+            COMMAND ${DIFF_COMMAND}
+            RESULT_VARIABLE DIFF_RESULT
+        )
+        set (DIFF_RESULT ${DIFF_RESULT} PARENT_SCOPE)
     endif()
+endfunction()
+
+# Function to build Botan using Makefile
+function(build_botan source_dir)
+    set(BOTAN_BUILD_COMMAND make)
+    # Enable parallel build and color output
+    if(NOT DEFINED PROCESSOR_COUNT)
+        include(ProcessorCount)
+        ProcessorCount(PROCESSOR_COUNT)
+        if(NOT PROCESSOR_COUNT EQUAL 0)
+            set(PROCESSOR_COUNT 4)
+        endif()
+    endif()
+
+    set(BOTAN_BUILD_COMMAND ${BOTAN_BUILD_COMMAND} -j ${PROCESSOR_COUNT})
+    execute_process(
+        COMMAND ${BOTAN_BUILD_COMMAND}
+        WORKING_DIRECTORY ${source_dir}
+    )
+endfunction()
+
+# Main script
+
+# Find Python3 interpreter
+find_python3()
+
+# Fetch the tarball
+fetch_tarball()
+
+# Set the CXX compiler for configure.py
+set_cxx_compiler()
+
+# Set botan_SOURCE_DIR to _deps/botan-src/
+set(botan_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/../botan-src)
+
+# Rename Makefile if it exists
+rename_makefile_if_exists(${botan_SOURCE_DIR})
+
+# Generate Makefile using configure.py
+generate_makefile(${botan_SOURCE_DIR})
+
+# Check if Makefile needs to be rebuilt
+check_makefile_rebuild(${botan_SOURCE_DIR})
+
+if (NOT DIFF_RESULT EQUAL 0)
+    # Build Botan using Makefile
+    build_botan(${botan_SOURCE_DIR})
+else()
+    message(STATUS "Botan is already built")
 endif()
-
-set(BOTAN_BUILD_COMMAND ${BOTAN_BUILD_COMMAND} -j ${PROCESSOR_COUNT})
-execute_process(
-   COMMAND ${BOTAN_BUILD_COMMAND}
-   WORKING_DIRECTORY ${botan_SOURCE_DIR}
-)
-
-# Set Botan_INCLUDE_DIRS to the include directory
-set(Botan_INCLUDE_DIRS ${botan_SOURCE_DIR}/include PARENT_SCOPE)
-# Set Botan_LIBRARIES to the library directory
-set(Botan_LIBRARIES ${botan_SOURCE_DIR}/lib PARENT_SCOPE)
-
-# Set Botan_FOUND to true
-set(Botan_FOUND TRUE PARENT_SCOPE)
