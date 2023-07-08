@@ -40,7 +40,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif()
 
 # Cache the configure.py command
-if (NOT EXISTS ${botan_BINARY_DIR}/Makefile)
+if (NOT EXISTS ${botan_SOURCE_DIR}/Makefile)
     set(BOTAN_COMFIG_ARGS 
         --cc=${BOTAN_CXX_COMPILER}
         --without-documentation
@@ -71,9 +71,9 @@ execute_process(
 )
 
 # Set Botan_INCLUDE_DIRS to the include directory
-set(Botan_INCLUDE_DIRS ${botan_BINARY_DIR}/include PARENT_SCOPE)
+set(Botan_INCLUDE_DIRS ${botan_SOURCE_DIR}/include PARENT_SCOPE)
 # Set Botan_LIBRARIES to the library directory
-set(Botan_LIBRARIES ${botan_BINARY_DIR}/lib PARENT_SCOPE)
+set(Botan_LIBRARIES ${botan_SOURCE_DIR}/lib PARENT_SCOPE)
 
 # Set Botan_FOUND to true
 set(Botan_FOUND TRUE PARENT_SCOPE)
