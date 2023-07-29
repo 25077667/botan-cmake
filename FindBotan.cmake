@@ -39,6 +39,8 @@ function(set_cxx_compiler)
         set(BOTAN_CXX_COMPILER "clang")
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")  
         set(BOTAN_CXX_COMPILER "msvc")
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+        set(BOTAN_CXX_COMPILER "clang")
     endif()
 
     # Expose the CXX compiler to configure.py
