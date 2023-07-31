@@ -3,8 +3,8 @@ project(botan)
 
 # Set botan variables: version, download url
 set(Botan_FIND_VERSION_MAJOR 3)
-set(Botan_FIND_VERSION_MINOR 0)
-set(Botan_FIND_VERSION_PATCH 0)
+set(Botan_FIND_VERSION_MINOR 1)
+set(Botan_FIND_VERSION_PATCH 1)
 set(Botan_VERSION_STRING ${Botan_FIND_VERSION_MAJOR}.${Botan_FIND_VERSION_MINOR}.${Botan_FIND_VERSION_PATCH})
 set(DOWNLOAD_URL https://github.com/randombit/botan/archive/refs/tags/${Botan_VERSION_STRING}.tar.gz)
 
