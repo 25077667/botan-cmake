@@ -59,6 +59,7 @@ function(generate_makefile source_dir)
     set(BOTAN_CONFIG_ARGS 
         --cc=${BOTAN_CXX_COMPILER}
         --without-documentation
+        --build-targets=static
     )
     set(CONFIGURE_COMMAND ${Python3_EXECUTABLE} configure.py ${BOTAN_CONFIG_ARGS})
     message(STATUS "Botan configure command: ${CONFIGURE_COMMAND}")
